@@ -59,6 +59,35 @@ public class BoardService {
                 .withFoxOnMove(true)
                 .build();
     }
+    /**
+     * Végrehajt egy lépést: új Board készül (a régi változatlan marad), a mozgó fél helye megváltozik,
+     * a sor a másik félre kerül, és a {@code board} mező az új példányra cserélődik.
+     *
+     * @throws IllegalArgumentException ha a lépés null, nem az következik, aki lépne, vagy szabálytalan
+     */
+    public void doMove(Move move) {
+        if (move == null) {
+            throw new IllegalArgumentException("A lépés nem lehet null.");
+        }
+        boolean foxMove = move.getMover() instanceof Fox;
+        if (foxMove != board.isFoxOnMove()) {
+            throw new IllegalArgumentException("Most nem ez a fél következik: " + move);
+        }
+        List<Move> legalMoves = foxMove ? determineFoxPossibleMoves() : determineHoundsPossibleMoves();
+        if (!isLegal(move, legalMoves)) {
+            throw new IllegalArgumentException("Szabálytalan lépés: " + move);
+        }
+        Position from = move.getMover().getPosition();
+        Position to = new Position(from, move.getDirection());
+        if (foxMove) {
+            board = board.withFoxPosition(to).withFoxOnMove(false);
+        } else {
+            List<Position> hounds = new ArrayList<>(board.getHoundsPositions());
+            hounds.set(hounds.indexOf(from), to);
+            board = board.withHoundsPositions(hounds).withFoxOnMove(true);
+        }
+    }
+
     /** A róka lehetséges lépései: mind a 4 átlós irány, ha a cél a pályán belül van és üres. */
     public List<Move> determineFoxPossibleMoves() {
         List<Move> moves = new ArrayList<>();
@@ -103,6 +132,16 @@ public class BoardService {
     /** Nincs-e a mezőn bábu. A határellenőrzést a fits végzi. (A PDF privátnak jelöli, itt is csomag-szintű.) */
     boolean isEmpty(Position p) {
         return !p.equals(board.getFoxPosition()) && !board.getHoundsPositions().contains(p);
+    }
+    private static boolean isLegal(Move move, List<Move> legalMoves) {
+        for (Move legal : legalMoves) {
+            if (legal.getMover().getClass() == move.getMover().getClass()
+                    && legal.getMover().getPosition().equals(move.getMover().getPosition())
+                    && legal.getDirection() == move.getDirection()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean canStep(Position from, Direction direction) {

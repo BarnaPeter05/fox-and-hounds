@@ -25,6 +25,10 @@ public class Main {
         System.out.println(boardService.getBoard());
         System.out.println("Róka lépései: " + boardService.determineFoxPossibleMoves());
         System.out.println("Kutyák lépései: " + boardService.determineHoundsPossibleMoves());
+        boardService.doMove(boardService.determineFoxPossibleMoves().get(0));
+        boardService.doMove(boardService.determineHoundsPossibleMoves().get(0));
+        System.out.println("Egy-egy lépés után:");
+        System.out.println(boardService.getBoard());
         System.out.println("Hibák száma: " + errorCounter.getErrorCount());
     }
 }

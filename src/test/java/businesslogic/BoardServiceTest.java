@@ -3,6 +3,7 @@ package businesslogic;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -11,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import model.Board;
+import model.Direction;
 import model.Fox;
 import model.Hound;
 import model.Move;
@@ -179,5 +181,107 @@ class BoardServiceTest {
 
         assertEquals(List.of("Hound(4,1) SOUTHWEST", "Hound(4,1) SOUTHEAST",
                 "Hound(4,3) SOUTHWEST", "Hound(4,3) SOUTHEAST"), names(service.determineHoundsPossibleMoves()));
+    }
+
+    @Test
+    void foxMoveUpdatesBoardAndPassesTurnToHounds() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8));
+
+        service.doMove(service.determineFoxPossibleMoves().get(0));
+
+        Board after = service.getBoard();
+        assertEquals(new Position(6, 1), after.getFoxPosition());
+        assertFalse(after.isFoxOnMove());
+        assertEquals(BoardService.getStarterBoard(8).getHoundsPositions(), after.getHoundsPositions());
+    }
+
+    @Test
+    void houndMoveUpdatesOnlyThatHoundAndPassesTurnToFox() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8).withFoxOnMove(false));
+
+        service.doMove(service.determineHoundsPossibleMoves().get(0));
+
+        Board after = service.getBoard();
+        assertEquals(List.of(new Position(1, 0), new Position(0, 3), new Position(0, 5), new Position(0, 7)),
+                after.getHoundsPositions());
+        assertEquals(new Position(7, 0), after.getFoxPosition());
+        assertTrue(after.isFoxOnMove());
+    }
+
+    @Test
+    void doMoveReplacesBoardAndLeavesOldBoardUntouched() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8));
+        Board before = service.getBoard();
+        Move move = service.determineFoxPossibleMoves().get(0);
+
+        service.doMove(move);
+
+        assertNotSame(before, service.getBoard());
+        assertEquals(new Position(7, 0), before.getFoxPosition());
+        assertTrue(before.isFoxOnMove());
+        assertEquals(new Position(7, 0), move.getMover().getPosition());
+    }
+
+    @Test
+    void movesAlternateBetweenFoxAndHounds() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8));
+
+        service.doMove(service.determineFoxPossibleMoves().get(0));
+        service.doMove(service.determineHoundsPossibleMoves().get(0));
+        service.doMove(service.determineFoxPossibleMoves().get(0));
+
+        assertEquals(new Position(5, 0), service.getBoard().getFoxPosition());
+        assertEquals(new Position(1, 0), service.getBoard().getHoundsPositions().get(0));
+        assertFalse(service.getBoard().isFoxOnMove());
+    }
+
+    @Test
+    void houndCannotMoveOnFoxTurn() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8));
+        Move houndMove = service.determineHoundsPossibleMoves().get(0);
+        Board before = service.getBoard();
+
+        assertThrows(IllegalArgumentException.class, () -> service.doMove(houndMove));
+        assertSame(before, service.getBoard());
+    }
+
+    @Test
+    void foxCannotMoveOnHoundsTurn() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8).withFoxOnMove(false));
+        Move foxMove = new Move(new Fox(new Position(7, 0)), Direction.NORTHEAST);
+
+        assertThrows(IllegalArgumentException.class, () -> service.doMove(foxMove));
+    }
+
+    @Test
+    void illegalFoxMovesAreRejected() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8));
+        BoardService blocked = new BoardService(board(new Position(7, 0), new Position(6, 1)));
+        Board before = service.getBoard();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.doMove(new Move(new Fox(new Position(7, 0)), Direction.NORTHWEST)));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.doMove(new Move(new Fox(new Position(3, 3)), Direction.NORTHEAST)));
+        assertThrows(IllegalArgumentException.class,
+                () -> blocked.doMove(new Move(new Fox(new Position(7, 0)), Direction.NORTHEAST)));
+        assertSame(before, service.getBoard());
+    }
+
+    @Test
+    void illegalHoundMovesAreRejected() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8).withFoxOnMove(false));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.doMove(new Move(new Hound(new Position(0, 1)), Direction.NORTHEAST)));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.doMove(new Move(new Hound(new Position(4, 4)), Direction.SOUTHEAST)));
+    }
+
+    @Test
+    void nullMoveIsRejected() {
+        BoardService service = new BoardService(BoardService.getStarterBoard(8));
+
+        assertThrows(IllegalArgumentException.class, () -> service.doMove(null));
     }
 }
