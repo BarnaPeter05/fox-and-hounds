@@ -2,12 +2,14 @@ import config.GameConfig;
 import event.GameEvent;
 import event.GameEventPublisher;
 import event.GameEventType;
+import businesslogic.BoardService;
+import config.GameConfig;
+import event.GameEvent;
+import event.GameEventPublisher;
+import event.GameEventType;
 import event.listener.AuditLoggerListener;
 import event.listener.ConsoleEventPrinter;
 import event.listener.ErrorCounter;
-import model.Board;
-import model.Position;
-import java.util.List;
 
 public class Main {
 
@@ -20,15 +22,11 @@ public class Main {
         publisher.subscribe(new AuditLoggerListener());
         publisher.subscribe(errorCounter);
 
-        Board board = Board.builder()
-                .withBoardSize(config.getBoardSize())
-                .withFoxPosition(new Position(config.getBoardSize() - 1, 0))
-                .withHoundsPositions(List.of(new Position(0, 1), new Position(0, 3)))
-                .withFoxOnMove(true)
-                .build();
+        BoardService boardService = new BoardService(BoardService.getStarterBoard(config.getBoardSize()));
 
         publisher.publish(new GameEvent(GameEventType.GAME_STARTED,
-                "Fox and Hounds - pályaméret: " + board.getBoardSize() + ", róka: " + board.getFoxPosition()));
+                "Fox and Hounds - pályaméret: " + boardService.getBoard().getBoardSize()));
+        System.out.println(boardService.getBoard());
         System.out.println("Hibák száma: " + errorCounter.getErrorCount());
     }
 }

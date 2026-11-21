@@ -84,6 +84,33 @@ public final class Board {
         return Objects.hash(boardSize, foxPosition, houndsPositions, foxOnMove);
     }
 
+    /** Szöveges rajz: F a róka, H a kutya, . a sötét (játszható) mező, szóköz a világos mező. */
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("   ");
+        for (int col = 0; col < boardSize; col++) {
+            sb.append(String.format("%2d", col));
+        }
+        for (int row = 0; row < boardSize; row++) {
+            StringBuilder line = new StringBuilder(String.format("%2d ", row));
+            for (int col = 0; col < boardSize; col++) {
+                line.append(' ').append(cellChar(new Position(row, col)));
+            }
+            sb.append('\n').append(line.toString().stripTrailing());
+        }
+        return sb.toString();
+    }
+
+    private char cellChar(Position p) {
+        if (p.equals(foxPosition)) {
+            return 'F';
+        }
+        if (houndsPositions.contains(p)) {
+            return 'H';
+        }
+        return (p.getRow() + p.getCol()) % 2 == 1 ? '.' : '#';
+    }
+
     public static final class Builder {
 
         private int boardSize;

@@ -1,0 +1,118 @@
+package businesslogic;
+
+import java.util.ArrayList;
+import java.util.List;
+import model.Board;
+import model.Direction;
+import model.Fox;
+import model.Hound;
+import model.Move;
+import model.Position;
+
+/**
+ * A játékszabályok és a pálya életciklusa. A Board immutable, ezért a későbbi lépések
+ * (6-8. nap) mindig új Boardot hoznak létre, és a {@code board} mezőt cserélik le.
+ */
+public class BoardService {
+
+    private static final int MIN_BOARD_SIZE = 4;
+    private static final List<Direction> HOUND_DIRECTIONS = List.of(Direction.SOUTHWEST, Direction.SOUTHEAST);
+
+    private Board board;
+
+    public BoardService(Board board) {
+        if (board == null) {
+            throw new IllegalArgumentException("A pálya nem lehet null.");
+        }
+        this.board = board;
+    }
+
+    public Board getBoard() {
+        return board;
+    }
+
+    /** Üres pálya: nincs rajta se róka, se kutya (a róka helye null). A szerkesztő (EDIT) fázis kezdőpontja. */
+    public static Board getEmptyBoard(int n) {
+        checkSize(n);
+        return Board.builder()
+                .withBoardSize(n)
+                .withFoxPosition(null)
+                .withHoundsPositions(List.of())
+                .withFoxOnMove(true)
+                .build();
+    }
+
+    /** Alaphelyzet: a kutyák a 0. sor sötét mezőin, a róka az alsó sor első sötét mezőjén. A róka lép először. */
+    public static Board getStarterBoard(int n) {
+        checkSize(n);
+        List<Position> hounds = new ArrayList<>();
+        for (int col = 0; col < n; col++) {
+            if (isDark(0, col)) {
+                hounds.add(new Position(0, col));
+            }
+        }
+        int foxCol = isDark(n - 1, 0) ? 0 : 1;
+        return Board.builder()
+                .withBoardSize(n)
+                .withFoxPosition(new Position(n - 1, foxCol))
+                .withHoundsPositions(hounds)
+                .withFoxOnMove(true)
+                .build();
+    }
+    /** A róka lehetséges lépései: mind a 4 átlós irány, ha a cél a pályán belül van és üres. */
+    public List<Move> determineFoxPossibleMoves() {
+        List<Move> moves = new ArrayList<>();
+        Position foxPosition = board.getFoxPosition();
+        if (foxPosition == null) {
+            return moves;
+        }
+        Fox fox = new Fox(foxPosition);
+        for (Direction direction : Direction.values()) {
+            if (canStep(foxPosition, direction)) {
+                moves.add(new Move(fox, direction));
+            }
+        }
+        return moves;
+    }
+
+    /** A kutyák lehetséges lépései: minden kutya csak lefelé (DL, DK) léphet, üres, pályán belüli mezőre. */
+    public List<Move> determineHoundsPossibleMoves() {
+        List<Move> moves = new ArrayList<>();
+        for (Position houndPosition : board.getHoundsPositions()) {
+            Hound hound = new Hound(houndPosition);
+            for (Direction direction : HOUND_DIRECTIONS) {
+                if (canStep(houndPosition, direction)) {
+                    moves.add(new Move(hound, direction));
+                }
+            }
+        }
+        return moves;
+    }
+
+    /** Csak a sötét mezők játszhatók: (sor + oszlop) páratlan. */
+    static boolean isDark(int row, int col) {
+        return (row + col) % 2 == 1;
+    }
+
+    /** A pálya határán belül van-e a pozíció. (A PDF privátnak jelöli, a tesztelhetőség miatt csomag-szintű.) */
+    boolean fits(Position p) {
+        int size = board.getBoardSize();
+        return p.getRow() >= 0 && p.getRow() < size && p.getCol() >= 0 && p.getCol() < size;
+    }
+
+    /** Nincs-e a mezőn bábu. A határellenőrzést a fits végzi. (A PDF privátnak jelöli, itt is csomag-szintű.) */
+    boolean isEmpty(Position p) {
+        return !p.equals(board.getFoxPosition()) && !board.getHoundsPositions().contains(p);
+    }
+
+    private boolean canStep(Position from, Direction direction) {
+        Position target = new Position(from, direction);
+        return fits(target) && isEmpty(target);
+    }
+
+    private static void checkSize(int n) {
+        if (n < MIN_BOARD_SIZE) {
+            throw new IllegalArgumentException("A pálya legalább " + MIN_BOARD_SIZE + " széles kell legyen: " + n);
+        }
+    }
+}

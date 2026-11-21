@@ -93,4 +93,13 @@ class BoardTest {
         assertEquals(a.hashCode(), b.hashCode());
         assertNotEquals(a, validBuilder().withFoxOnMove(false).build());
     }
+
+@Test
+void toStringDrawsHeaderFoxAndHounds() {
+    String[] lines = validBuilder().build().toString().split("\n");
+
+    assertEquals(9, lines.length);
+    assertEquals('H', lines[1].charAt(6));
+    assertEquals('F', lines[8].charAt(4));
+    }
 }
