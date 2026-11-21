@@ -3,8 +3,10 @@ package model;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import businesslogic.BoardService;
 import org.junit.jupiter.api.Test;
 
 class GameStateTest {
@@ -19,6 +21,17 @@ class GameStateTest {
         assertFalse(state.isLoadedAGame());
         assertNull(state.getFoxIsOnMove());
         assertFalse(state.isExitRequested());
+        assertNull(state.getBoardService());
+    }
+
+    @Test
+    void boardServiceCanBeSet() {
+        GameState state = new GameState();
+        BoardService service = new BoardService(BoardService.getStarterBoard(8));
+
+        state.setBoardService(service);
+
+        assertSame(service, state.getBoardService());
     }
 
     @Test

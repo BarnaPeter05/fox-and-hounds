@@ -1,7 +1,3 @@
-import config.GameConfig;
-import event.GameEvent;
-import event.GameEventPublisher;
-import event.GameEventType;
 import businesslogic.BoardService;
 import config.GameConfig;
 import event.GameEvent;
@@ -27,6 +23,8 @@ public class Main {
         publisher.publish(new GameEvent(GameEventType.GAME_STARTED,
                 "Fox and Hounds - pályaméret: " + boardService.getBoard().getBoardSize()));
         System.out.println(boardService.getBoard());
+        System.out.println("Róka lépései: " + boardService.determineFoxPossibleMoves());
+        System.out.println("Kutyák lépései: " + boardService.determineHoundsPossibleMoves());
         System.out.println("Hibák száma: " + errorCounter.getErrorCount());
     }
 }

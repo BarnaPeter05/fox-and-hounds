@@ -21,4 +21,9 @@ public final class Move {
     public Direction getDirection() {
         return direction;
     }
+
+    @Override
+    public String toString() {
+        return mover.getClass().getSimpleName() + mover.getPosition() + " " + direction;
+    }
 }

@@ -1,5 +1,7 @@
 package model;
 
+import businesslogic.BoardService;
+
 /**
  * A játékmenet változó (mutable) állapota. A parancsok ezt módosítják, a GameEngine pedig ez alapján
  * dönti el, melyik parancs érhető el. A BoardService mező a 6. napon kerül ide.
@@ -8,6 +10,7 @@ public class GameState {
 
     private GamePhase phase = GamePhase.EDIT;
     private int size = -1;
+    private BoardService boardService;
     private Boolean humanPlaysWithFox = null;
     private boolean loadedAGame = false;
     private Boolean foxIsOnMove = null;
@@ -19,6 +22,12 @@ public class GameState {
 
     public void setPhase(GamePhase phase) {
         this.phase = phase;
+    }
+    public BoardService getBoardService() {
+        return boardService;
+    }
+    public void setBoardService(BoardService boardService) {
+        this.boardService = boardService;
     }
 
     public int getSize() {

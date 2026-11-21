@@ -24,4 +24,10 @@ class MoveTest {
         assertThrows(IllegalArgumentException.class, () -> new Move(null, Direction.NORTHEAST));
         assertThrows(IllegalArgumentException.class, () -> new Move(fox, null));
     }
+    @Test
+    void toStringShowsFigureAndDirection() {
+        Move move = new Move(new Fox(new Position(7, 0)), Direction.NORTHEAST);
+
+        assertEquals("Fox(7,0) NORTHEAST", move.toString());
+    }
 }
