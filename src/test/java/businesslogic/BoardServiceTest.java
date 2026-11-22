@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import model.Board;
 import model.Direction;
 import model.Fox;
@@ -283,5 +284,107 @@ class BoardServiceTest {
         BoardService service = new BoardService(BoardService.getStarterBoard(8));
 
         assertThrows(IllegalArgumentException.class, () -> service.doMove(null));
+    }
+
+    private static Random fixedRandom(int value) {
+        return new Random() {
+            @Override
+            public int nextInt(int bound) {
+                return value;
+            }
+        };
+    }
+
+    @Test
+    void constructorRejectsNullRandom() {
+        Board board = BoardService.getStarterBoard(8);
+
+        assertThrows(IllegalArgumentException.class, () -> new BoardService(board, null));
+    }
+
+    @Test
+    void foxWinsOnlyOnRowZero() {
+        assertTrue(new BoardService(board(new Position(0, 1))).winFox());
+        assertFalse(new BoardService(BoardService.getStarterBoard(8)).winFox());
+        assertFalse(new BoardService(BoardService.getEmptyBoard(8)).winFox());
+    }
+
+    @Test
+    void houndsWinWhenFoxIsTrapped() {
+        BoardService corner = new BoardService(board(new Position(7, 0), new Position(6, 1)));
+        BoardService edge = new BoardService(board(new Position(4, 7), new Position(3, 6), new Position(5, 6)));
+
+        assertTrue(corner.winHounds());
+        assertTrue(edge.winHounds());
+    }
+
+    @Test
+    void houndsDoNotWinWhenFoxCanMoveOrIsMissing() {
+        assertFalse(new BoardService(BoardService.getStarterBoard(8)).winHounds());
+        assertFalse(new BoardService(BoardService.getEmptyBoard(8)).winHounds());
+    }
+
+    @Test
+    void foxOnRowZeroWinsEvenWithoutMoves() {
+        BoardService service = new BoardService(board(new Position(0, 1), new Position(1, 0), new Position(1, 2)));
+
+        assertTrue(service.winFox());
+        assertFalse(service.winHounds());
+    }
+
+    @Test
+    void randomFoxMoveUsesTheRandomIndex() {
+        BoardService service = new BoardService(board(new Position(4, 3)), fixedRandom(2));
+
+        service.doARandomFoxMove();
+
+        assertEquals(new Position(5, 2), service.getBoard().getFoxPosition());
+        assertFalse(service.getBoard().isFoxOnMove());
+    }
+
+    @Test
+    void randomHoundMoveUsesTheRandomIndex() {
+        Board board = BoardService.getStarterBoard(8).withFoxOnMove(false);
+        BoardService service = new BoardService(board, fixedRandom(6));
+
+        service.doARandomHoundMove();
+
+        assertEquals(List.of(new Position(0, 1), new Position(0, 3), new Position(0, 5), new Position(1, 6)),
+                service.getBoard().getHoundsPositions());
+        assertTrue(service.getBoard().isFoxOnMove());
+    }
+
+    @Test
+    void randomMovesFailWhenThereIsNoMove() {
+        BoardService trappedFox = new BoardService(board(new Position(7, 0), new Position(6, 1)));
+        Board stuck = board(new Position(0, 1), new Position(7, 2)).withFoxOnMove(false);
+        BoardService stuckHounds = new BoardService(stuck);
+
+        assertThrows(IllegalStateException.class, trappedFox::doARandomFoxMove);
+        assertThrows(IllegalStateException.class, stuckHounds::doARandomHoundMove);
+    }
+
+    @Test
+    void randomGamesAlwaysTerminate() {
+        for (int seed = 0; seed < 50; seed++) {
+            BoardService service = new BoardService(BoardService.getStarterBoard(8), new Random(seed));
+            int plies = 0;
+            while (!service.winFox() && !service.winHounds() && plies < 500) {
+                boolean foxTurn = service.getBoard().isFoxOnMove();
+                List<Move> moves = foxTurn
+                        ? service.determineFoxPossibleMoves()
+                        : service.determineHoundsPossibleMoves();
+                if (moves.isEmpty()) {
+                    break;
+                }
+                if (foxTurn) {
+                    service.doARandomFoxMove();
+                } else {
+                    service.doARandomHoundMove();
+                }
+                plies++;
+            }
+            assertTrue(plies < 500, "A játék nem ért véget, seed: " + seed);
+        }
     }
 }

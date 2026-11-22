@@ -2,6 +2,7 @@ package businesslogic;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import model.Board;
 import model.Direction;
 import model.Fox;
@@ -18,13 +19,20 @@ public class BoardService {
     private static final int MIN_BOARD_SIZE = 4;
     private static final List<Direction> HOUND_DIRECTIONS = List.of(Direction.SOUTHWEST, Direction.SOUTHEAST);
 
+    private final Random random;
     private Board board;
 
     public BoardService(Board board) {
-        if (board == null) {
-            throw new IllegalArgumentException("A pálya nem lehet null.");
+        this(board, new Random());
+    }
+
+    /** A Random kívülről adható, így a véletlen lépések tesztelhetők (pl. fix vagy seedelt generátorral). */
+    public BoardService(Board board, Random random) {
+        if (board == null || random == null) {
+            throw new IllegalArgumentException("A pálya és a véletlengenerátor nem lehet null.");
         }
         this.board = board;
+        this.random = random;
     }
 
     public Board getBoard() {
@@ -42,7 +50,10 @@ public class BoardService {
                 .build();
     }
 
-    /** Alaphelyzet: a kutyák a 0. sor sötét mezőin, a róka az alsó sor első sötét mezőjén. A róka lép először. */
+    /**
+     * Alaphelyzet: a kutyák a 0. sor sötét mezőin, a róka az alsó sor első sötét mezőjén.
+     * A róka lép először.
+     */
     public static Board getStarterBoard(int n) {
         checkSize(n);
         List<Position> hounds = new ArrayList<>();
@@ -59,6 +70,7 @@ public class BoardService {
                 .withFoxOnMove(true)
                 .build();
     }
+
     /**
      * Végrehajt egy lépést: új Board készül (a régi változatlan marad), a mozgó fél helye megváltozik,
      * a sor a másik félre kerül, és a {@code board} mező az új példányra cserélődik.
@@ -86,6 +98,35 @@ public class BoardService {
             hounds.set(hounds.indexOf(from), to);
             board = board.withHoundsPositions(hounds).withFoxOnMove(true);
         }
+    }
+
+    /** A róka nyert, ha elérte a 0. sort. */
+    public boolean winFox() {
+        Position fox = board.getFoxPosition();
+        return fox != null && fox.getRow() == 0;
+    }
+
+    /** A kutyák nyertek, ha a róka nem tud lépni (és nem ért el a 0. sorba). */
+    public boolean winHounds() {
+        return board.getFoxPosition() != null && !winFox() && determineFoxPossibleMoves().isEmpty();
+    }
+
+    /** Véletlenszerű szabályos lépés a rókának. */
+    public void doARandomFoxMove() {
+        List<Move> moves = determineFoxPossibleMoves();
+        if (moves.isEmpty()) {
+            throw new IllegalStateException("A rókának nincs lehetséges lépése.");
+        }
+        doMove(moves.get(random.nextInt(moves.size())));
+    }
+
+    /** Véletlenszerű szabályos lépés egy kutyának. */
+    public void doARandomHoundMove() {
+        List<Move> moves = determineHoundsPossibleMoves();
+        if (moves.isEmpty()) {
+            throw new IllegalStateException("A kutyáknak nincs lehetséges lépése.");
+        }
+        doMove(moves.get(random.nextInt(moves.size())));
     }
 
     /** A róka lehetséges lépései: mind a 4 átlós irány, ha a cél a pályán belül van és üres. */
@@ -123,16 +164,17 @@ public class BoardService {
         return (row + col) % 2 == 1;
     }
 
-    /** A pálya határán belül van-e a pozíció. (A PDF privátnak jelöli, a tesztelhetőség miatt csomag-szintű.) */
+    /** A pálya határán belül van-e a pozíció. (A PDF szerint privát, a teszteléshez csomag-szintű.) */
     boolean fits(Position p) {
         int size = board.getBoardSize();
         return p.getRow() >= 0 && p.getRow() < size && p.getCol() >= 0 && p.getCol() < size;
     }
 
-    /** Nincs-e a mezőn bábu. A határellenőrzést a fits végzi. (A PDF privátnak jelöli, itt is csomag-szintű.) */
+    /** Nincs-e a mezőn bábu. A határellenőrzést a fits végzi. (Ez is csomag-szintű a teszteléshez.) */
     boolean isEmpty(Position p) {
         return !p.equals(board.getFoxPosition()) && !board.getHoundsPositions().contains(p);
     }
+
     private static boolean isLegal(Move move, List<Move> legalMoves) {
         for (Move legal : legalMoves) {
             if (legal.getMover().getClass() == move.getMover().getClass()
